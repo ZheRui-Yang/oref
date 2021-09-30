@@ -19,7 +19,7 @@ print_help () {
 	echo '    Check or add online refernce list.'
 	echo
 	echo Usage:
-	echo 'olml [-a|-add KEY=URL] [-h|--help] [-l|--list] [-d|--dir DIR] [-f|--file FILE] [-c|--clipboard SELECTION] KEYWORDS'
+	echo 'oref [-a|-add KEY=URL] [-h|--help] [-l|--list] [-d|--dir DIR] [-f|--file FILE] [-c|--clipboard SELECTION] KEYWORDS'
 }
 
 if [ $# -eq 0 ] ; then
