@@ -1,0 +1,136 @@
+#! /usr/bin/env sh
+#
+# olml - online manuals checker
+#
+# TODO: delete
+# TODO: unique key
+ADD_ITEM=false
+CLIPBOARD_INPUT='xclip -i -selection'
+DIR=$(pwd)
+FILE=".oref.record.tsv"
+LIST_ALL=false
+COPY=false
+
+declare -A records new
+
+print_help () {
+	echo oref - Online References
+	echo
+	echo '    Check or add online refernce list.'
+	echo
+	echo Usage:
+	echo 'olml [-a|-add KEY=URL] [-h|--help] [-l|--list] [-d|--dir DIR] [-f|--file FILE] [-c|--clipboard SELECTION] KEYWORDS'
+}
+
+if [ $# -eq 0 ] ; then
+	print_help
+	exit 0
+fi
+
+# Parse options
+TEMP=$(getopt -o 'a:hld:f:c::' --long 'add:,help,list,dir:,file:,clipboard::' -n 'OnlineManul' -- "$@")
+
+if [ $? -ne 0 ]; then
+	echo 'Error accur when parsing options, terminating...' >&2
+	exit 1
+fi
+
+# Note the quotes around "$TEMP": they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+# reference: /usr/share/doc/util-linux/getopt-example.bash
+while true; do
+	case "$1" in
+		'-h'|'--help')
+			print_help
+			exit 0
+		;;
+		'-l'|'--list')
+			LIST_ALL=true
+			shift
+			continue
+		;;
+		'-a'|'--add')
+			ADD_ITEM=true
+		       	# if argument of -a is  "key001=https://example.com/value"
+			KEY=$(echo $2 | sed 's/\(.*\)=.*/\1/')  # key001
+			VALUE=$(echo $2 | sed 's/.*=\(.*\)/\1/')  # https://example.com/value
+			new["$KEY"]="$VALUE"
+			shift 2
+			continue
+		;;
+		'-d'|'--dir')
+			DIR=$2
+			shift 2
+			continue
+		;;
+		'-f'|'--file')
+			$(echo $2 | grep -q '[/*+!?><^@#$%^&()`]') && echo "Invalid filename, fallback to \"${FILE}\"." || FILE=$2
+			shift 2
+			continue
+		;;
+		'-c'|'--clipboard')
+			COPY=true
+			case $2 in 
+				'')
+					SELECTION='clipboard'
+				;;
+				'primary'|'secondary')
+					SELECTION=$2
+				;;
+				*)
+					echo "Unrecongnized selection: $2, fallback to clipboard"
+					SELECTION='clipboard'
+				;;
+			esac
+			shift 2
+			continue
+		;;
+		'--')
+			shift
+			break
+		;;
+		*)
+			echo 'Internal error!' >&2
+			exit 1
+		;;
+	esac
+done
+
+# Init a data file if not existed.
+[ -f "${DIR%%/}/${FILE}" ] || echo '# Online manual record file' > "${DIR%%/}/${FILE}"
+
+# Add new records
+if $ADD_ITEM ; then
+	for KEY in ${!new[@]} ; do
+		echo -e "${KEY}\t${new[$KEY]}" >> "${DIR%%/}/${FILE}"
+	done
+fi
+
+# Read data from file
+while read -r KEY VALUE ; do
+	if $(echo $KEY | grep -Pq "^#|^$") ; then
+		continue  # skip comments and blank lines (including lines that only have tabs and spaces)
+	else
+		records[$KEY]=$VALUE
+	fi
+done < "${DIR%%/}/${FILE}"
+
+# List all records
+if $LIST_ALL ; then
+	if [ -f "${DIR%%/}/${FILE}" ] ; then
+		for key in ${!records[@]} ; do
+			echo \[$key\]: ${records[$key]}
+		done
+	fi
+fi
+
+# List queried records
+for arg; do
+	if $(echo ${!records[@]} | grep -q $arg) ; then
+		echo ${records["$arg"]}
+		$COPY && echo ${records["$arg"]} | $CLIPBOARD_INPUT $SELECTION
+	fi
+done
+# sed -n \'2,$p\' .oref.record.tsv | awk \'{ print $1 }\' | nl
