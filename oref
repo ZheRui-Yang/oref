@@ -4,6 +4,7 @@
 #
 # TODO: delete
 # TODO: unique key
+# TODO: interactive mode using "select" statement
 ADD_ITEM=false
 CLIPBOARD_INPUT='xclip -i -selection'
 DIR=$(pwd)
@@ -14,21 +15,20 @@ COPY=false
 declare -A records new
 
 print_help () {
-	echo oref - Online References
+	echo 'oref [-a|-add KEY=URL] [-h|--help] [-l|--list] [-d|--dir DIR] [-f|--file FILE] [-c|--clipboard SELECTION] [KEYWORDS]'
 	echo
-	echo '    Check or add online refernce list.'
+	echo Check or add online refernce list.
 	echo
-	echo Usage:
-	echo 'oref [-a|-add KEY=URL] [-h|--help] [-l|--list] [-d|--dir DIR] [-f|--file FILE] [-c|--clipboard SELECTION] KEYWORDS'
 }
 
+# TODO: change to interactive mode
 if [ $# -eq 0 ] ; then
 	print_help
 	exit 0
 fi
 
 # Parse options
-TEMP=$(getopt -o 'a:hld:f:c::' --long 'add:,help,list,dir:,file:,clipboard::' -n 'OnlineManul' -- "$@")
+TEMP=$(getopt -o 'a:hld:f:c::i' --long 'add:,help,list,dir:,file:,clipboard::,interactive' -n 'OnlineReference' -- "$@")
 
 if [ $? -ne 0 ]; then
 	echo 'Error accur when parsing options, terminating...' >&2
@@ -45,6 +45,11 @@ while true; do
 		'-h'|'--help')
 			print_help
 			exit 0
+		;;
+		'-i'|'--interactive')
+			INTERACTIVE=true
+			shift
+			continue
 		;;
 		'-l'|'--list')
 			LIST_ALL=true
@@ -116,6 +121,17 @@ while read -r KEY VALUE ; do
 		records[$KEY]=$VALUE
 	fi
 done < "${DIR%%/}/${FILE}"
+
+# Interactive mode
+if $INTERACTIVE ; then
+	select KEY in ${!records[@]}
+	do
+		echo ${records[$KEY]}
+		$COPY && echo ${records["$KEY"]} | $CLIPBOARD_INPUT $SELECTION
+		break
+	done
+	exit 0
+fi
 
 # List all records
 if $LIST_ALL ; then
