@@ -11,6 +11,7 @@ DIR=$(pwd)
 FILE=".oref.record.tsv"
 LIST_ALL=false
 COPY=false
+INTERACTIVE=false
 
 declare -A records new
 
@@ -59,8 +60,8 @@ while true; do
 		'-a'|'--add')
 			ADD_ITEM=true
 		       	# if argument of -a is  "key001=https://example.com/value"
-			KEY=$(echo $2 | sed 's/\(.*\)=.*/\1/')  # key001
-			VALUE=$(echo $2 | sed 's/.*=\(.*\)/\1/')  # https://example.com/value
+			KEY=$(echo $2 | sed 's/\([^=]*\)=.*/\1/')  # key001
+			VALUE=$(echo $2 | sed 's/[^=]*=\(.*\)/\1/')  # https://example.com/value
 			new["$KEY"]="$VALUE"
 			shift 2
 			continue
